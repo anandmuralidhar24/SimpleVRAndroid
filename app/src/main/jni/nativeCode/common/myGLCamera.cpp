@@ -167,47 +167,23 @@ void MyGLCamera::TranslateModel(float distanceX, float distanceY) {
  */
 glm::mat4 MyGLCamera::GetMVPAlignedWithGravity(std::vector<float> gravity) {
 
-//    MyLOGD("gravity %f %f %f", gravity[0], gravity[1], gravity[2]);
-
     // extract 3x3 rotation mat from model mat
     glm::mat3 currentRotationMat = glm::mat3(modelMat);
-    //todo: handle orientation
-    glm::vec3 transformedZAxis = currentRotationMat * glm::vec3(0.0, 1.0, 0.0);
-    transformedZAxis = glm::normalize(transformedZAxis);
+    glm::vec3 sceneUpVector = currentRotationMat * glm::vec3(0.0, 1.0, 0.0);
+    sceneUpVector = glm::normalize(sceneUpVector);
     glm::vec3 gravityVector = glm::vec3(gravity[0], gravity[1], gravity[2]);
     gravityVector = glm::normalize(gravityVector);
 
-    glm::mat4 gravityRotationMat = glm::mat4(1.0);
-    float cosTheta = glm::dot(transformedZAxis, gravityVector);
+    float cosTheta = fmax(fmin(glm::dot(sceneUpVector, gravityVector), 1.), -1.);
+    float rotationAngle = acos(cosTheta);
+    glm::vec3 rotationAxis = glm::cross(sceneUpVector, gravityVector);
+    rotationAxis = glm::normalize(rotationAxis);
 
-    glm::mat4 newModelMat = modelMat;
-    const float EPS = 1e-7;
-    if(1.0 - fabs(cosTheta) < EPS){
+    // compute quaternion and rotation mat using above
+    glm::quat gravityRotationQuat = glm::angleAxis(rotationAngle, rotationAxis);
+    glm::mat4 gravityRotationMat = glm::toMat4(gravityRotationQuat);
 
-        //If vectors are aligned ..
-        if(cosTheta < 0){
-            gravityRotationMat[0][0] = -1.0;
-            gravityRotationMat[2][2] = -1.0;
-            newModelMat = gravityRotationMat * newModelMat;
-        }
-
-    } else {
-
-        float angleOfRotation = glm::acos(cosTheta);//its range is from 0-pi
-        glm::vec3 rotationAxis = glm::cross(transformedZAxis, gravityVector);
-        glm::vec3 rotation_axis_normalised = glm::normalize(rotationAxis);
-        gravityRotationMat = glm::rotate(gravityRotationMat, (float) (angleOfRotation),
-                                         rotation_axis_normalised);
-
-        glm::mat3 correctedRotationMat = glm::mat3(gravityRotationMat) * currentRotationMat;
-        for (int r = 0; r < 3; r++) {
-            for (int c = 0; c < 3; c++) {
-                newModelMat[c][r] = correctedRotationMat[c][r];
-            }
-        }
-    }
-
-    glm::mat4 newMvpMat = projectionViewMat * newModelMat;
+    glm::mat4 newMvpMat = projectionViewMat * gravityRotationMat * modelMat;
     return newMvpMat;
 }
 

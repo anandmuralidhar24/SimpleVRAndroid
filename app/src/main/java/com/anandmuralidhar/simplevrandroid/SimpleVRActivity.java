@@ -48,7 +48,7 @@ public class SimpleVRActivity extends Activity{
         mGestureObject = new GestureClass(this);
         mGLView.setOnTouchListener(mGestureObject.TwoFingerGestureListener);
 
-        mSensorObject = new SensorClass(this);
+        mSensorObject = new SensorClass(this, mGLView);
     }
 
     @Override

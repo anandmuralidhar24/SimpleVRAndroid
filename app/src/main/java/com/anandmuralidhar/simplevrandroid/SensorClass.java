@@ -23,10 +23,15 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
+import android.view.View;
 
 public class SensorClass implements SensorEventListener {
 
     public SensorManager mSensorManager;
+    private View mView;
+    private int deviceRotation;
 
     private float[] gyroQuaternion = new float[3];
     private boolean isGyroSensorAvailable;
@@ -44,7 +49,7 @@ public class SensorClass implements SensorEventListener {
 
     private boolean isSensorsAvailable;
 
-    public SensorClass(Activity mainActivity) {
+    public SensorClass(Activity mainActivity, View view) {
 
         mSensorManager = (SensorManager) mainActivity.getSystemService(Context.SENSOR_SERVICE);
 
@@ -56,6 +61,7 @@ public class SensorClass implements SensorEventListener {
         mAccel = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         isSensorsAvailable = (mGyro != null) && (mAccel != null);
+        mView= view;
     }
 
     public boolean RegisterSensors() {
@@ -86,12 +92,12 @@ public class SensorClass implements SensorEventListener {
     // higher values -> more filtering
     private static final float ACCEL_ALPHA = 0.8f;
 
-    private void CalculateGravityFromAccelerometer(SensorEvent event) {
+    private void CalculateGravityFromAccelerometer(float [] accel) {
 
         // Isolate the force of gravity with the low-pass filter.
-        gravity[0] = ACCEL_ALPHA * gravity[0] + (1 - ACCEL_ALPHA) * event.values[0];
-        gravity[1] = ACCEL_ALPHA * gravity[1] + (1 - ACCEL_ALPHA) * event.values[1];
-        gravity[2] = ACCEL_ALPHA * gravity[2] + (1 - ACCEL_ALPHA) * event.values[2];
+        gravity[0] = ACCEL_ALPHA * gravity[0] + (1 - ACCEL_ALPHA) * accel[0];
+        gravity[1] = ACCEL_ALPHA * gravity[1] + (1 - ACCEL_ALPHA) * accel[1];
+        gravity[2] = ACCEL_ALPHA * gravity[2] + (1 - ACCEL_ALPHA) * accel[2];
 
     }
 
@@ -101,16 +107,16 @@ public class SensorClass implements SensorEventListener {
     private static final float NS2S = 1.0f / 1000000000.0f;
     private float timestamp = 0.0f;
 
-    private void CalculateRotationVectorFromGyro(SensorEvent event) {
+    private void CalculateRotationVectorFromGyro(SensorEvent event, float [] gyro) {
 
         // This timestep's delta rotation to be multiplied by the current rotation
         // after computing it from the gyro sample data.
         if (timestamp != 0) {
             final float dT = (event.timestamp - timestamp) * NS2S;
             // Axis of the rotation sample, not normalized yet.
-            float axisX = event.values[0];
-            float axisY = event.values[1];
-            float axisZ = event.values[2];
+            float axisX = gyro[0];
+            float axisY = gyro[1];
+            float axisZ = gyro[2];
 
             // Calculate the angular speed of the sample
             float omegaMagnitude = (float) Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
@@ -142,15 +148,48 @@ public class SensorClass implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
 
+        if(mView.getDisplay() == null) {
+            return;
+        }
+        deviceRotation = mView.getDisplay().getRotation();
+        float [] eventValues= new float[3];
+        switch(deviceRotation) {
+
+            case Surface.ROTATION_0:
+                eventValues[0] = event.values[0];
+                eventValues[1] = event.values[1];
+                eventValues[2] = event.values[2];
+                break;
+
+            case Surface.ROTATION_90:
+                eventValues[0] = -event.values[1];
+                eventValues[1] = event.values[0];
+                eventValues[2] = event.values[2];
+                break;
+
+            case Surface.ROTATION_180:
+                eventValues[0] = -event.values[0];
+                eventValues[1] = -event.values[1];
+                eventValues[2] = event.values[2];
+                break;
+
+            case Surface.ROTATION_270:
+                eventValues[0] = event.values[1];
+                eventValues[1] = -event.values[0];
+                eventValues[2] = event.values[2];
+                break;
+
+        }
+
         switch (event.sensor.getType()) {
 
             case Sensor.TYPE_ACCELEROMETER:
-                CalculateGravityFromAccelerometer(event);
+                CalculateGravityFromAccelerometer(eventValues);
                 SendGravityToNative(gravity[0], gravity[1], gravity[2]);
                 break;
 
             case Sensor.TYPE_GYROSCOPE:
-                CalculateRotationVectorFromGyro(event);
+                CalculateRotationVectorFromGyro(event, eventValues);
                 SendGyroQuatToNative(gyroQuaternion[0],
                         gyroQuaternion[1], gyroQuaternion[2]);
                 break;
