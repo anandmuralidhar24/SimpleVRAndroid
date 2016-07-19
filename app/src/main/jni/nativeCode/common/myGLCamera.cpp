@@ -169,17 +169,20 @@ glm::mat4 MyGLCamera::GetMVPAlignedWithGravity(std::vector<float> gravity) {
 
     // extract 3x3 rotation mat from model mat
     glm::mat3 currentRotationMat = glm::mat3(modelMat);
+    // in every device, Y axis is pointing upwards before applying rotations
+    // check the current position of Y axis after rotating it
     glm::vec3 sceneUpVector = currentRotationMat * glm::vec3(0.0, 1.0, 0.0);
     sceneUpVector = glm::normalize(sceneUpVector);
     glm::vec3 gravityVector = glm::vec3(gravity[0], gravity[1], gravity[2]);
     gravityVector = glm::normalize(gravityVector);
 
+    // find the angle between rotated Y-axis and gravity vector
     float cosTheta = fmax(fmin(glm::dot(sceneUpVector, gravityVector), 1.), -1.);
     float rotationAngle = acos(cosTheta);
     glm::vec3 rotationAxis = glm::cross(sceneUpVector, gravityVector);
     rotationAxis = glm::normalize(rotationAxis);
 
-    // compute quaternion and rotation mat using above
+    // compute quaternion that will rotate and align sceneUpVector along gravity vector
     glm::quat gravityRotationQuat = glm::angleAxis(rotationAngle, rotationAxis);
     glm::mat4 gravityRotationMat = glm::toMat4(gravityRotationQuat);
 
@@ -192,7 +195,7 @@ glm::mat4 MyGLCamera::GetMVPAlignedWithGravity(std::vector<float> gravity) {
  */
 void MyGLCamera::AddDeltaRotation(glm::mat4 deltaRotationMat){
 
-    //accumulate gyro delta on right since latest rot is applied first to obj
+    //accumulate gyro delta on right since latest rotation is applied first to model
     rotateMat = rotateMat * deltaRotationMat;
     modelMat    = translateMat * rotateMat;
 

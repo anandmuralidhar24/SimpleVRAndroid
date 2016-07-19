@@ -33,26 +33,30 @@ public class SensorClass implements SensorEventListener {
     private View mView;
     private int deviceRotation;
 
-    private float[] gyroQuaternion = new float[3];
+    // gyro variables
+    Sensor mGyro;
+    private float[] gyroQuaternion = new float[4];
     private boolean isGyroSensorAvailable;
 
+    // accelerometer variables
+    Sensor mAccel;
     private float[] gravity = new float[3];
     private boolean isAccelSensorAvailable;
 
-    Sensor mGyro, mAccel;
-    private native void SendGravityToNative(float gravityX, float gravityY, float gravityZ);
-    private native void SendGyroQuatToNative(float gyroQuatX, float gyroQuatY, float gyroQuatZ);
+    private boolean isSensorsAvailable;
 
     public boolean isSensorsAvailable() {
         return isSensorsAvailable;
     }
-
-    private boolean isSensorsAvailable;
+    private native void SendGravityToNative(float gravityX, float gravityY, float gravityZ);
+    private native void SendGyroQuatToNative(float gyroQuatW, float gyroQuatX, float gyroQuatY,
+                                             float gyroQuatZ);
 
     public SensorClass(Activity mainActivity, View view) {
 
         mSensorManager = (SensorManager) mainActivity.getSystemService(Context.SENSOR_SERVICE);
 
+        // initialize gravity vector to 0 before starting to filter inputs
         gravity[0] = 0.0f;
         gravity[1] = 0.0f;
         gravity[2] = 0.0f;
@@ -60,6 +64,7 @@ public class SensorClass implements SensorEventListener {
         mGyro = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         mAccel = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
+        // if either sensor is not available, app will exit
         isSensorsAvailable = (mGyro != null) && (mAccel != null);
         mView= view;
     }
@@ -77,6 +82,7 @@ public class SensorClass implements SensorEventListener {
         isAccelSensorAvailable = mSensorManager.registerListener(this, mAccel,
                 SensorManager.SENSOR_DELAY_GAME);
 
+        // if either sensor is not registered, app will exit
         isSensorsAvailable = isGyroSensorAvailable && isAccelSensorAvailable;
         return isSensorsAvailable;
     }
@@ -92,9 +98,9 @@ public class SensorClass implements SensorEventListener {
     // higher values -> more filtering
     private static final float ACCEL_ALPHA = 0.8f;
 
+    // Isolate the force of gravity with a low-pass filter.
     private void CalculateGravityFromAccelerometer(float [] accel) {
 
-        // Isolate the force of gravity with the low-pass filter.
         gravity[0] = ACCEL_ALPHA * gravity[0] + (1 - ACCEL_ALPHA) * accel[0];
         gravity[1] = ACCEL_ALPHA * gravity[1] + (1 - ACCEL_ALPHA) * accel[1];
         gravity[2] = ACCEL_ALPHA * gravity[2] + (1 - ACCEL_ALPHA) * accel[2];
@@ -107,6 +113,7 @@ public class SensorClass implements SensorEventListener {
     private static final float NS2S = 1.0f / 1000000000.0f;
     private float timestamp = 0.0f;
 
+    // calculate a quaternion that represents device rotation
     private void CalculateRotationVectorFromGyro(SensorEvent event, float [] gyro) {
 
         // This timestep's delta rotation to be multiplied by the current rotation
@@ -131,19 +138,19 @@ public class SensorClass implements SensorEventListener {
 
             // Integrate around this axis with the angular speed by the timestep
             // in order to get a delta rotation from this sample over the timestep
-            // We will convert this axis-angle representation of the delta rotation
-            // into an input for OpenCV's cv::Rodrigues function
-
+            // Create a quaternion representing rotation -- will be input to GLM in native code
+            // quaternion = [cos(theta/2), sin(theta/2)*axisX, sin(theta/2)*axisY, sin(theta/2)*axisZ)]
             float theta = omegaMagnitude * dT ;
-            //TODO: handle change in orientation
-            gyroQuaternion[0] = theta * axisX;
-            gyroQuaternion[1] = theta * axisY;
-            gyroQuaternion[2] = theta * axisZ;
+            gyroQuaternion[0] = (float) Math.cos(theta/2);
+            gyroQuaternion[1] = (float) Math.sin(theta/2) * axisX;
+            gyroQuaternion[2] = (float) Math.sin(theta/2) * axisY;
+            gyroQuaternion[3] = (float) Math.sin(theta/2) * axisZ;
         }
+
+        // save timestamp for next call
         timestamp = event.timestamp;
 
     }
-
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -151,6 +158,10 @@ public class SensorClass implements SensorEventListener {
         if(mView.getDisplay() == null) {
             return;
         }
+
+        // coordinate system of device does not change with orientation
+        // we check for device orientation and rearrange event values so that subsequent
+        // calculations can be oblivious to change in orientation
         deviceRotation = mView.getDisplay().getRotation();
         float [] eventValues= new float[3];
         switch(deviceRotation) {
@@ -190,8 +201,8 @@ public class SensorClass implements SensorEventListener {
 
             case Sensor.TYPE_GYROSCOPE:
                 CalculateRotationVectorFromGyro(event, eventValues);
-                SendGyroQuatToNative(gyroQuaternion[0],
-                        gyroQuaternion[1], gyroQuaternion[2]);
+                SendGyroQuatToNative(gyroQuaternion[0], gyroQuaternion[1], gyroQuaternion[2],
+                        gyroQuaternion[3]);
                 break;
         }
     }

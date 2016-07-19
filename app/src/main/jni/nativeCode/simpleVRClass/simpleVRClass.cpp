@@ -30,15 +30,15 @@ SimpleVRClass::SimpleVRClass() {
     MyLOGD("SimpleVRClass::SimpleVRClass");
     initsDone = false;
 
-    // create MyGLCamera object and set default position for the object
+    // create MyGLCamera object and place camera in center of the world, zPositioon=0
     myGLCamera = new MyGLCamera(45, 0);
-    float pos[]={0.,0.,0.,0.,0.,0.};
+    float pos[]={0.,0.,0.,0.,0.,0.}; // center of cube (ourWorld) coincides with center of world
     std::copy(&pos[0], &pos[5], std::back_inserter(modelDefaultPosition));
     myGLCamera->SetModelPosition(modelDefaultPosition);
 
     modelObject = NULL;
     gravityMutex.unlock();
-    gravity.assign(3, 0); // assign 3 values
+    gravity.assign(3, 0);
     gravity[2] = 1.0f;
 
     gyroMutex.unlock();
@@ -67,11 +67,17 @@ void SimpleVRClass::PerformGLInits() {
     modelObject = new AssimpLoader();
 
     // extract the OBJ and companion files from assets
+    // its a long list since ourWorld.obj has 6 textures corresponding to faces of the cube
     std::string objFilename, mtlFilename, texFilename;
     bool isFilesPresent  =
-            gHelperObject->ExtractAssetReturnFilename("cube.obj", objFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("cube.mtl", mtlFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("cube-sky.jpg", texFilename);
+            gHelperObject->ExtractAssetReturnFilename("ourWorld.obj", objFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld.mtl", mtlFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_bk.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_dn.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_ft.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_lf.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_rt.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("deception_pass_up.jpg", texFilename);
     if( !isFilesPresent ) {
         MyLOGE("Model %s does not exist!", objFilename.c_str());
         return;
@@ -130,30 +136,6 @@ void SimpleVRClass::DoubleTapAction() {
 }
 
 /**
- * rotate the model if user scrolls with one finger
- */
-void SimpleVRClass::ScrollAction(float distanceX, float distanceY, float positionX, float positionY) {
-
-    myGLCamera->RotateModel(distanceX, distanceY, positionX, positionY);
-}
-
-/**
- * pinch-zoom: move the model closer or farther away
- */
-void SimpleVRClass::ScaleAction(float scaleFactor) {
-
-    myGLCamera->ScaleModel(scaleFactor);
-}
-
-/**
- * two-finger drag: displace the model by changing its x-y coordinates
- */
-void SimpleVRClass::MoveAction(float distanceX, float distanceY) {
-
-    myGLCamera->TranslateModel(distanceX, distanceY);
-}
-
-/**
  * Copy gravity vector from sensor into private variable
  */
 void SimpleVRClass::UpdateGravity(float gx, float gy, float gz) {
@@ -169,23 +151,17 @@ void SimpleVRClass::UpdateGravity(float gx, float gy, float gz) {
 /**
  * Construct rotation mat from gyro's quaternion and update camera's rotation matrix
  */
-void SimpleVRClass::UpdateRotation(float gyroQuatX, float gyroQuatY, float gyroQuatZ) {
+void SimpleVRClass::UpdateRotation(float gyroQuatW, float gyroQuatX, float gyroQuatY, float gyroQuatZ) {
 
-    //apply rotation according to delta-rotation vector from gyro
-    cv::Mat gyroQuaternion = cv::Mat::zeros(3, 1, CV_32F);
-    gyroQuaternion.at<float>(0, 0) = gyroQuatX;
-    gyroQuaternion.at<float>(1, 0) = gyroQuatY;
-    gyroQuaternion.at<float>(2, 0) = gyroQuatZ;
-    cv::Mat gyroRotationMat;
-    cv::Rodrigues(gyroQuaternion, gyroRotationMat);
-    cv::Mat gyroRotationCVMat4 = cv::Mat::eye(4, 4, CV_32F);
-    cv::Rect roi(0, 0, 3, 3);
-    gyroRotationMat.copyTo(gyroRotationCVMat4(roi));
+    // construct rotation matrix from quaternion
+    glm::quat gyroQuaternion(gyroQuatW, gyroQuatX, gyroQuatY, gyroQuatZ);
+    glm::mat4 gyroRotationGLMMat = glm::toMat4(gyroQuaternion);
 
-//    gyroRotationCVMat4 = gyroRotationCVMat4.t();
+    // transpose of rotation matrix = inverse of rotation matrix
+    // need to move model in opposite direction of device movement
+    gyroRotationGLMMat = glm::transpose(gyroRotationGLMMat);
 
-    glm::mat4 gyroRotationGLMMat = glm::make_mat4((float *) gyroRotationCVMat4.data);
-
+    // update rotation mat in myGLCamera under mutex since rendering call might be reading it
     gyroMutex.try_lock();
     myGLCamera->AddDeltaRotation(gyroRotationGLMMat);
     gyroMutex.unlock();

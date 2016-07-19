@@ -17,14 +17,19 @@
 package com.anandmuralidhar.simplevrandroid;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.View;
 
 
 public class SimpleVRActivity extends Activity{
     private GLSurfaceView mGLView = null;
     private SensorClass mSensorObject;
+    private boolean appIsExiting=false;
 
     private native void CreateObjectNative(AssetManager assetManager, String pathToInternalDir);
     private native void DeleteObjectNative();
@@ -46,9 +51,19 @@ public class SimpleVRActivity extends Activity{
 
         // mGestureObject will handle touch gestures on the screen
         mGestureObject = new GestureClass(this);
-        mGLView.setOnTouchListener(mGestureObject.TwoFingerGestureListener);
+        mGLView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                mGestureObject.mTapDetector.onTouchEvent(event);
+                return true;
+            }
+        });
 
         mSensorObject = new SensorClass(this, mGLView);
+        if(!mSensorObject.isSensorsAvailable()) {
+            ShowExitDialog(this, getResources().getString(R.string.exit_no_sensor));
+            appIsExiting=true;
+        }
     }
 
     @Override
@@ -56,12 +71,19 @@ public class SimpleVRActivity extends Activity{
 
         super.onResume();
 
+        if(appIsExiting) {
+            return;
+        }
+
         // Android suggests that we call onResume on GLSurfaceView
         if (mGLView != null) {
             mGLView.onResume();
         }
 
-        mSensorObject.RegisterSensors();
+        if(!mSensorObject.RegisterSensors()){
+            ShowExitDialog(this, getResources().getString(R.string.exit_no_reg_sensor));
+            appIsExiting=true;
+        }
 
     }
 
@@ -89,6 +111,20 @@ public class SimpleVRActivity extends Activity{
 
     }
 
+    public static void ShowExitDialog(final Activity activity, String exitMessage){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(activity);
+        alertDialogBuilder.setMessage(exitMessage)
+                .setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        activity.finish();
+                    }
+                });
+
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
 
     /**
      * load libSimpleVRNative.so since it has all the native functions

@@ -36,13 +36,10 @@ public:
     void    SetViewport(int width, int height);
     bool    IsInitsDone(){return initsDone;}
     void    DoubleTapAction();
-    void    ScrollAction(float distanceX, float distanceY, float positionX, float positionY);
-    void    ScaleAction(float scaleFactor);
-    void    MoveAction(float distanceX, float distanceY);
     int     GetScreenWidth() const { return screenWidth; }
     int     GetScreenHeight() const { return screenHeight; }
     void    UpdateGravity(float gx, float gy, float gz);
-    void    UpdateRotation(float gyroQuatX, float gyroQuatY, float gyroQuatZ);
+    void    UpdateRotation(float gyroQuatW, float gyroQuatX, float gyroQuatY, float gyroQuatZ);
 
 private:
     bool    initsDone;

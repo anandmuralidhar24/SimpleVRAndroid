@@ -40,6 +40,7 @@ Java_com_anandmuralidhar_simplevrandroid_SensorClass_SendGravityToNative(JNIEnv 
 JNIEXPORT void JNICALL
 Java_com_anandmuralidhar_simplevrandroid_SensorClass_SendGyroQuatToNative(JNIEnv *env,
                                                                           jobject instance,
+                                                                          jfloat gyroQuatW,
                                                                           jfloat gyroQuatX,
                                                                           jfloat gyroQuatY,
                                                                           jfloat gyroQuatZ) {
@@ -47,7 +48,7 @@ Java_com_anandmuralidhar_simplevrandroid_SensorClass_SendGyroQuatToNative(JNIEnv
     if(gSimpleVRObject == NULL){
         return;
     }
-    gSimpleVRObject->UpdateRotation(gyroQuatX, gyroQuatY, gyroQuatZ);
+    gSimpleVRObject->UpdateRotation(gyroQuatW, gyroQuatX, gyroQuatY, gyroQuatZ);
 
 }
 
