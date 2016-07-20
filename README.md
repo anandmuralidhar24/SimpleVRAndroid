@@ -1,6 +1,12 @@
 SimpleVRAndroid
 ===============
 
+In this project we build a simple virtual reality (VR) app that allows the user to explore a virtual environment by moving the device. 
+The app will use accelerometer and gyroscope sensors to determine the device’s orientation.
+
+A blog describing this project:
+http://www.anandmuralidhar.com/blog/android/simple-vr
+
 License
 -------
 

@@ -30,7 +30,7 @@ SimpleVRClass::SimpleVRClass() {
     MyLOGD("SimpleVRClass::SimpleVRClass");
     initsDone = false;
 
-    // create MyGLCamera object and place camera in center of the world, zPositioon=0
+    // create MyGLCamera object and place camera in center of the world, zPosition=0
     myGLCamera = new MyGLCamera(45, 0);
     float pos[]={0.,0.,0.,0.,0.,0.}; // center of cube (ourWorld) coincides with center of world
     std::copy(&pos[0], &pos[5], std::back_inserter(modelDefaultPosition));
@@ -105,7 +105,6 @@ void SimpleVRClass::Render() {
 
     gyroMutex.unlock();
     gravityMutex.unlock();
-//    glm::mat4 mvpMat = myGLCamera->GetMVP();
 
     modelObject->Render3DModel(&mvpMat);
 

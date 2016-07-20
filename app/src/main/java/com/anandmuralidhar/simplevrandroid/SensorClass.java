@@ -52,22 +52,23 @@ public class SensorClass implements SensorEventListener {
     private native void SendGyroQuatToNative(float gyroQuatW, float gyroQuatX, float gyroQuatY,
                                              float gyroQuatZ);
 
-    public SensorClass(Activity mainActivity, View view) {
+public SensorClass(Activity mainActivity, View view) {
 
-        mSensorManager = (SensorManager) mainActivity.getSystemService(Context.SENSOR_SERVICE);
+    mSensorManager = (SensorManager) mainActivity.getSystemService(Context.SENSOR_SERVICE);
 
-        // initialize gravity vector to 0 before starting to filter inputs
-        gravity[0] = 0.0f;
-        gravity[1] = 0.0f;
-        gravity[2] = 0.0f;
+    // fetch gyro and accel sensors
+    mGyro = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+    mAccel = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        mGyro = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        mAccel = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+    // if either sensor is not available, app will exit
+    isSensorsAvailable = (mGyro != null) && (mAccel != null);
+    mView= view;
 
-        // if either sensor is not available, app will exit
-        isSensorsAvailable = (mGyro != null) && (mAccel != null);
-        mView= view;
-    }
+    // initialize gravity vector to 0 before starting to filter inputs
+    gravity[0] = 0.0f;
+    gravity[1] = 0.0f;
+    gravity[2] = 0.0f;
+}
 
     public boolean RegisterSensors() {
 
@@ -138,13 +139,16 @@ public class SensorClass implements SensorEventListener {
 
             // Integrate around this axis with the angular speed by the timestep
             // in order to get a delta rotation from this sample over the timestep
-            // Create a quaternion representing rotation -- will be input to GLM in native code
-            // quaternion = [cos(theta/2), sin(theta/2)*axisX, sin(theta/2)*axisY, sin(theta/2)*axisZ)]
-            float theta = omegaMagnitude * dT ;
-            gyroQuaternion[0] = (float) Math.cos(theta/2);
-            gyroQuaternion[1] = (float) Math.sin(theta/2) * axisX;
-            gyroQuaternion[2] = (float) Math.sin(theta/2) * axisY;
-            gyroQuaternion[3] = (float) Math.sin(theta/2) * axisZ;
+            // We will convert this axis-angle representation of the delta rotation
+            // into a quaternion before passing it to GLM in native.
+            float thetaOverTwo = omegaMagnitude * dT / 2.0f;
+            float sinThetaOverTwo = (float) Math.sin(thetaOverTwo);
+            float cosThetaOverTwo = (float) Math.cos(thetaOverTwo);
+            gyroQuaternion[0] = cosThetaOverTwo;
+            gyroQuaternion[1] = sinThetaOverTwo * axisX;
+            gyroQuaternion[2] = sinThetaOverTwo * axisY;
+            gyroQuaternion[3] = sinThetaOverTwo * axisZ;
+
         }
 
         // save timestamp for next call
@@ -155,6 +159,8 @@ public class SensorClass implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
 
+        // wait for display to be initialized since we need to fetch device rotation before
+        // processing sensor data
         if(mView.getDisplay() == null) {
             return;
         }
