@@ -7,7 +7,7 @@ The app will use accelerometer and gyroscope sensors to determine the device’s
 A blog describing this project:
 http://www.anandmuralidhar.com/blog/android/simple-vr
 
-This project requires devices with ABI armeabi-v7a.
+The project will run on Android devices that have both a gyroscope and an accelerometer. It also requires devices with ABI armeabi-v7a.
 
 License
 -------
