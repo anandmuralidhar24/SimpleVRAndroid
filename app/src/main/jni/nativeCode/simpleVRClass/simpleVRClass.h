@@ -34,10 +34,7 @@ public:
     void    PerformGLInits();
     void    Render();
     void    SetViewport(int width, int height);
-    bool    IsInitsDone(){return initsDone;}
     void    DoubleTapAction();
-    int     GetScreenWidth() const { return screenWidth; }
-    int     GetScreenHeight() const { return screenHeight; }
     void    UpdateGravity(float gx, float gy, float gz);
     void    UpdateRotation(float gyroQuatW, float gyroQuatX, float gyroQuatY, float gyroQuatZ);
 

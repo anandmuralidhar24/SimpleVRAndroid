@@ -46,7 +46,7 @@ public class SimpleVRActivity extends Activity{
         CreateObjectNative(assetManager, pathToInternalDir);
 
         // layout has only two components, a GLSurfaceView and a TextView
-        setContentView(R.layout.assimp_layout);
+        setContentView(R.layout.simplevr_layout);
         mGLView = (MyGLSurfaceView) findViewById (R.id.gl_surface_view);
 
         // mGestureObject will handle touch gestures on the screen
