@@ -70,14 +70,14 @@ void SimpleVRClass::PerformGLInits() {
     // its a long list since ourWorld.obj has 6 textures corresponding to faces of the cube
     std::string objFilename, mtlFilename, texFilename;
     bool isFilesPresent  =
-            gHelperObject->ExtractAssetReturnFilename("ourWorld.obj", objFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("ourWorld.mtl", mtlFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_bk.jpg", texFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_dn.jpg", texFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_ft.jpg", texFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_lf.jpg", texFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_rt.jpg", texFilename) &&
-            gHelperObject->ExtractAssetReturnFilename("deception_pass_up.jpg", texFilename);
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/ourWorld.obj", objFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/ourWorld.mtl", mtlFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_bk.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_dn.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_ft.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_lf.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_rt.jpg", texFilename) &&
+            gHelperObject->ExtractAssetReturnFilename("ourWorld/deception_pass_up.jpg", texFilename);
     if( !isFilesPresent ) {
         MyLOGE("Model %s does not exist!", objFilename.c_str());
         return;
