@@ -188,7 +188,15 @@ glm::mat4 MyGLCamera::GetMVPAlignedWithGravity(std::vector<float> gravity) {
     glm::quat gravityRotationQuat = glm::angleAxis(rotationAngle, rotationAxis);
     glm::mat4 gravityRotationMat = glm::toMat4(gravityRotationQuat);
 
-    glm::mat4 newMvpMat = projectionViewMat * gravityRotationMat * modelMat;
+    glm::mat4 currentModelMat = modelMat;
+    glm::mat3 correctedRotationMat = glm::mat3(gravityRotationMat) * currentRotationMat;
+    for(int r=0;r<3;r++){
+        for(int c=0;c<3;c++){
+            currentModelMat[c][r] = correctedRotationMat[c][r];
+        }
+    }
+
+    glm::mat4 newMvpMat = projectionViewMat * currentModelMat;
     return newMvpMat;
 }
 
